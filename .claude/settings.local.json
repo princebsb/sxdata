@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(keytool:*)",
+      "Bash(D:downloads11-11-2025flutter_windows_3.38.3-stableflutterbinflutter build appbundle)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\LEO\\\\flutter\\\\sxdata && D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat build appbundle\")",
+      "Bash(powershell.exe -Command \"Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' build appbundle\")",
+      "Bash(powershell.exe -Command \"Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\windows\\\\flutter\\\\ephemeral\\\\.plugin_symlinks'' -Recurse -Force -ErrorAction SilentlyContinue; Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' clean\")",
+      "Bash(powershell.exe -Command \"Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\linux'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\macos'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\ios'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\windows\\\\flutter\\\\ephemeral'' -Recurse -Force -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe -Command \"Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' build appbundle --release\")",
+      "Bash(powershell.exe -Command \"Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' build apk --release\")",
+      "Bash(powershell.exe:*)"
+    ]
+  }
+}
