@@ -50,13 +50,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Este app precisa acessar a câmera para capturar fotos de evidência.</string>
 
-	<!-- Permissões de Localização -->
+	<!-- Permissões de Localização (apenas em primeiro plano) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Este app precisa da sua localização para registrar coordenadas das coletas.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Este app precisa da sua localização em segundo plano para registrar coordenadas.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Este app precisa da sua localização para registrar coordenadas das coletas.</string>
+	<string>Este app precisa da sua localização para registrar coordenadas das coletas de dados.</string>
 
 	<!-- Permissões de Galeria de Fotos -->
 	<key>NSPhotoLibraryUsageDescription</key>

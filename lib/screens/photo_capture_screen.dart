@@ -7,6 +7,7 @@ import 'dart:io';
 import '../models/questionnaire.dart';
 import '../providers/form_provider.dart';
 import 'form_completed_screen.dart';
+import 'location_disclosure_screen.dart';
 
 class PhotoCaptureScreen extends StatefulWidget {
   final Questionnaire questionnaire;
@@ -675,31 +676,55 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen> {
 
   Future<void> _getCurrentLocation() async {
     print('📍 Tentando obter localização');
-    
+
+    // Verificar se já temos permissão de localização
+    final currentStatus = await Permission.location.status;
+    print('📍 Status atual da permissão: $currentStatus');
+
+    // Se ainda não temos permissão, usar o novo fluxo de disclosure em destaque
+    if (!currentStatus.isGranted) {
+      // Mostrar tela de divulgação em destaque (conforme exigido pelo Google Play)
+      final permissionGranted = await LocationDisclosureHelper.showDisclosureAndRequestPermission(context);
+
+      if (!permissionGranted) {
+        print('📍 Usuário não concedeu permissão de localização');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Permissão de localização é necessária para registrar coordenadas'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() {
       _isLoadingLocation = true;
     });
 
     try {
-      final permission = await Permission.location.request();
-      print('📍 Permissão de localização: $permission');
-      
+      // Se já temos permissão, solicitar novamente apenas para confirmar
+      final permission = await Permission.location.status;
+      print('📍 Status da permissão após disclosure: $permission');
+
       if (permission.isGranted) {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
-        
+
         print('📍 Localização obtida: ${position.latitude}, ${position.longitude}');
-        
+
         setState(() {
           _currentPosition = position;
         });
-        
+
         try {
           final formProvider = Provider.of<FormProvider>(context, listen: false);
           formProvider.setLocation(
-            position.latitude, 
-            position.longitude, 
+            position.latitude,
+            position.longitude,
             ''
           );
           print('✅ Localização salva no FormProvider');
@@ -707,7 +732,7 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen> {
           print('❌ Erro ao salvar localização no FormProvider: $e');
         }
       } else {
-        print('❌ Permissão de localização negada');
+        print('❌ Permissão de localização não concedida');
       }
     } catch (e, stackTrace) {
       print('❌ Erro ao obter localização: $e');

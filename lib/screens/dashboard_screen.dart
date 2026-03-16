@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/questionnaire_provider.dart';
 import '../providers/form_provider.dart'; // Adicionar import do FormProvider
@@ -21,6 +22,7 @@ import 'stats_graphs_screen.dart';
 import 'applicators_map_screen.dart';
 import '../services/photo_storage_service.dart';
 import 'question_analysis_screen.dart';
+import 'location_disclosure_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,11 +42,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'error': 0,
   };
   bool _loadingPhotosStats = true;
+  bool _hasShownLocationDisclosure = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Mostrar disclosure de localização após o primeiro frame
+    // Isso garante que o Google Play veja a tela de disclosure
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showLocationDisclosureIfNeeded();
+    });
+  }
+
+  /// Mostra a tela de disclosure de localização se ainda não foi mostrada
+  /// IMPORTANTE: Isso é exigido pela política do Google Play
+  Future<void> _showLocationDisclosureIfNeeded() async {
+    if (_hasShownLocationDisclosure) return;
+
+    // Verificar se já foi aceito anteriormente
+    final alreadyAccepted = await LocationDisclosureHelper.isDisclosureAccepted();
+
+    if (kDebugMode) {
+      print('📍 Disclosure de localização: já aceito = $alreadyAccepted');
+    }
+
+    // SEMPRE mostrar o disclosure na primeira vez que o usuário entra no app
+    // Conforme exigido pelo Google Play para apps que usam localização
+    if (!alreadyAccepted && mounted) {
+      _hasShownLocationDisclosure = true;
+
+      if (kDebugMode) {
+        print('📍 Mostrando tela de disclosure de localização...');
+      }
+
+      await LocationDisclosureHelper.showDisclosureAndRequestPermission(context);
+
+      if (kDebugMode) {
+        print('📍 Disclosure de localização concluído');
+      }
+    }
   }
 
   Future<void> _loadData() async {
