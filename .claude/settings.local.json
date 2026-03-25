@@ -13,7 +13,32 @@
       "Bash(powershell.exe -Command \"Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\linux'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\macos'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\ios'' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ''D:\\\\LEO\\\\flutter\\\\sxdata\\\\windows\\\\flutter\\\\ephemeral'' -Recurse -Force -ErrorAction SilentlyContinue\")",
       "Bash(powershell.exe -Command \"Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' build appbundle --release\")",
       "Bash(powershell.exe -Command \"Set-Location ''D:\\\\LEO\\\\flutter\\\\sxdata''; & ''D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat'' build apk --release\")",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(dart run:*)",
+      "Bash(flutter pub run:*)",
+      "Bash(where:*)",
+      "Bash(del \"D:\\\\LEO\\\\flutter\\\\sxdata\\\\gerar_resumo_pdf.dart\")",
+      "Bash(flutter pub:*)",
+      "WebFetch(domain:painel.sxdata.com.br)",
+      "Bash(\"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat\" clean)",
+      "Bash(\"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat\" pub get)",
+      "Bash(\"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat\" build appbundle:*)",
+      "Bash(\"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat\" build:*)",
+      "Bash(D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter build:*)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\LEO\\\\flutter\\\\sxdata && D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat build apk --release\")",
+      "Bash(cmd.exe /c \"dir D:\\\\LEO\\\\flutter\\\\sxdata\\\\build\\\\app\\\\outputs\\\\flutter-apk\"\")",
+      "Bash(cmd.exe /c dir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(cmd.exe /c \"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat pub deps\")",
+      "Bash(cmd.exe /c \"cd /d D:\\\\LEO\\\\flutter\\\\sxdata\\\\build\\\\app\\\\outputs\\\\bundle\\\\release && dir\")",
+      "Bash(powershell:*)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\LEO\\\\flutter\\\\sxdata && D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat clean && D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat build appbundle --release\")",
+      "Bash(flutter clean:*)",
+      "Bash(D:downloads11-11-2025flutter_windows_3.38.3-stableflutterbinflutter.bat clean)",
+      "Bash(cmd /c \"D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat clean\")",
+      "Bash(cmd /c \"cd /d D:\\\\LEO\\\\flutter\\\\sxdata && D:\\\\downloads11-11-2025\\\\flutter_windows_3.38.3-stable\\\\flutter\\\\bin\\\\flutter.bat clean\")"
     ]
   }
 }
