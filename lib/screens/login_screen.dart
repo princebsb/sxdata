@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 10),
                       const Text(
-                        'Versão: 2.0',
+                        'Versão: 3.1',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color.fromARGB(255, 145, 145, 145),

@@ -1,0 +1,19 @@
+name: record_linux
+description: Stub for record_linux to fix compilation on non-Linux platforms.
+version: 0.7.3
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+flutter:
+  plugin:
+    implements: record
+    platforms:
+      linux:
+        dartPluginClass: RecordLinux
+
+dependencies:
+  flutter:
+    sdk: flutter
+  record_platform_interface: ^1.0.0

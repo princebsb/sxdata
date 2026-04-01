@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/stats_provider.dart';
 import 'providers/form_provider.dart';
 import 'providers/history_provider.dart';
+import 'providers/ai_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/theme.dart';
 import '../providers/question_analysis_provider.dart';
@@ -47,6 +48,7 @@ class SXDataApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => StatsProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ChangeNotifierProvider(create: (_) => QuestionAnalysisProvider()),
+        ChangeNotifierProvider(create: (_) => AiProvider()),
       ],
       child: MaterialApp(
         title: 'SXData',

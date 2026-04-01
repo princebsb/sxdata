@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/questionnaire.dart';
 import '../models/question.dart';
+import '../models/ai_models.dart';
 import '../providers/form_provider.dart';
+import '../providers/ai_provider.dart';
 import '../widgets/question_widgets.dart';
+import '../widgets/voice_transcription_widget.dart';
+import '../widgets/inconsistency_alert_widget.dart';
+import '../widgets/standardization_suggestion_widget.dart';
+import '../widgets/smart_suggestion_widget.dart';
+import '../widgets/follow_up_suggestion_widget.dart';
+import '../widgets/ai_status_indicator.dart';
+import '../widgets/realtime_validation_widget.dart';
+import '../widgets/approved_suggestion_banner.dart';
+import '../services/local_validation_service.dart';
 import 'photo_capture_screen.dart';
 import 'form_completed_screen.dart';
 import '../providers/auth_provider.dart';
@@ -25,6 +36,7 @@ class QuestionScreen extends StatefulWidget {
 class _QuestionScreenState extends State<QuestionScreen> {
   late PageController _pageController;
   final Map<int, dynamic> _currentAnswers = {};
+  final Map<int, List<ValidationAlert>> _validationAlerts = {};
   int _currentVisibleIndex = 0;
   bool _isInitialized = false;
 
@@ -45,9 +57,79 @@ class _QuestionScreenState extends State<QuestionScreen> {
       }
     }
 
-    // Inicializar FormProvider IMEDIATAMENTE
+    // Inicializar FormProvider e AiProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeFormProvider();
+      _initializeAiProvider();
+    });
+  }
+
+  void _initializeAiProvider() {
+    try {
+      final aiProvider = Provider.of<AiProvider>(context, listen: false);
+      aiProvider.initForForm(questionnaireId: widget.questionnaire.id);
+      // Busca em paralelo — falhas são silenciosas
+      aiProvider.loadApprovedSuggestions();
+      aiProvider.loadFollowUpTips();
+    } catch (e) {
+      print('⚠️ Erro ao inicializar AiProvider: $e');
+    }
+  }
+
+  /// Dispara verificação de inconsistências e follow-ups após alteração de resposta
+  void _onResponseChanged(int questionId, dynamic value, String questionType, FormProvider formProvider) {
+    // Salvar resposta no FormProvider
+    formProvider.setResponse(questionId, value, questionType);
+
+    // Validação local em tempo real (funciona offline)
+    _runLocalValidation(questionId, value, questionType);
+
+    // Disparar verificações via backend (com debounce)
+    final aiProvider = Provider.of<AiProvider>(context, listen: false);
+    if (aiProvider.isAiAvailable) {
+      final responsesMap = <String, dynamic>{};
+      formProvider.responses.forEach((key, val) {
+        responsesMap[key.toString()] = val;
+      });
+
+      // Inconsistências (debounce 2s)
+      aiProvider.checkInconsistenciesDebounced(responses: responsesMap);
+
+      // Follow-ups: sugestões de perguntas complementares (debounce 3s)
+      final strValue = value?.toString() ?? '';
+      if (strValue.trim().isNotEmpty) {
+        aiProvider.loadFollowUpDebounced(
+          questionId: questionId,
+          responseValue: strValue,
+          allResponses: responsesMap,
+        );
+      }
+    }
+  }
+
+  /// Executa validação local em tempo real para a resposta atual
+  void _runLocalValidation(int questionId, dynamic value, String questionType) {
+    // Encontrar o texto da pergunta
+    String questionText = '';
+    for (final q in widget.questionnaire.questions) {
+      if (q.id == questionId) {
+        questionText = q.questionText;
+        break;
+      }
+    }
+
+    final alerts = LocalValidationService.validate(
+      questionText: questionText,
+      questionType: questionType,
+      value: value,
+    );
+
+    setState(() {
+      if (alerts.isEmpty) {
+        _validationAlerts.remove(questionId);
+      } else {
+        _validationAlerts[questionId] = alerts;
+      }
     });
   }
 
@@ -204,6 +286,32 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     controller: _pageController,
                     itemCount: visibleQuestions.length,
                     onPageChanged: (index) {
+                      // Bloquear swipe para frente se pergunta obrigatória não respondida
+                      if (index > _currentVisibleIndex) {
+                        final currentQuestion = visibleQuestions[_currentVisibleIndex];
+                        final currentOriginalIndex = _getOriginalIndex(
+                          currentQuestion, formProvider,
+                        );
+                        final questionState = formProvider.getQuestionState(currentOriginalIndex);
+                        final isRequired = questionState?.required ?? currentQuestion.isRequired;
+
+                        if (isRequired) {
+                          final response = formProvider.getResponse(currentQuestion.id);
+                          if (response == null || response.toString().trim().isEmpty) {
+                            // Voltar para a pergunta atual
+                            _pageController.jumpToPage(_currentVisibleIndex);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Responda esta questão obrigatória antes de avançar'),
+                                backgroundColor: Colors.red,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                            return;
+                          }
+                        }
+                      }
+
                       setState(() {
                         _currentVisibleIndex = index;
                       });
@@ -359,11 +467,11 @@ class _QuestionScreenState extends State<QuestionScreen> {
           fit: BoxFit.contain,
         ),
         
-        // Espaço à direita com ícone
+        // Espaço à direita com indicador de IA
         Expanded(
           child: Align(
             alignment: Alignment.centerRight,
-            child: const Icon(Icons.quiz, color: Color(0xFF8fae5d), size: 24),
+            child: const AiStatusIndicator(compact: true),
           ),
         ),
       ],
@@ -424,15 +532,50 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Texto da questão
-                  Text(
-                    question.questionText,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF23345F),
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  // Texto da questão + botão de dicas de follow-up
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          question.questionText,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Color(0xFF23345F),
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Consumer<AiProvider>(
+                        builder: (context, aiProvider, _) {
+                          final tips =
+                              aiProvider.getFollowUpTips(question.id);
+                          final hasTips = tips != null && tips.isNotEmpty;
+                          return Tooltip(
+                            message: 'Dicas para esta pergunta',
+                            child: InkWell(
+                              onTap: () => _showFollowUpTipsModal(
+                                context,
+                                question.questionText,
+                                tips ?? [],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.help_outline,
+                                  size: 22,
+                                  color: hasTips
+                                      ? Colors.purple.shade400
+                                      : Colors.grey.shade400,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
 
                   // Obrigatório
@@ -496,16 +639,53 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         _currentAnswers[question.id] = value;
                       });
 
-                      // Salvar resposta no FormProvider
-                      formProvider.setResponse(
+                      // Salvar resposta e disparar verificações de IA
+                      _onResponseChanged(
                         question.id,
                         value,
                         question.questionType,
+                        formProvider,
                       );
-
-                      print('📝 Resposta salva, aguardando reavaliação...');
                     },
                   ),
+
+                  // === VALIDAÇÃO EM TEMPO REAL (local, funciona offline) ===
+                  if (_validationAlerts.containsKey(question.id))
+                    RealtimeValidationWidget(
+                      alerts: _validationAlerts[question.id]!,
+                    ),
+
+                  // === SUGESTÃO APROVADA PELO PAINEL ===
+                  Consumer<AiProvider>(
+                    builder: (context, aiProvider, _) {
+                      final approved =
+                          aiProvider.getApprovedSuggestion(question.id);
+                      if (approved == null) return const SizedBox.shrink();
+                      return ApprovedSuggestionBanner(
+                        suggestion: approved,
+                        onApply: () {
+                          final value =
+                              aiProvider.applyApprovedSuggestion(question.id);
+                          if (value != null) {
+                            setState(() {
+                              _currentAnswers[question.id] = value;
+                            });
+                            _onResponseChanged(
+                              question.id,
+                              value,
+                              question.questionType,
+                              formProvider,
+                            );
+                          }
+                        },
+                        onIgnore: () =>
+                            aiProvider.ignoreApprovedSuggestion(question.id),
+                      );
+                    },
+                  ),
+
+                  // === WIDGETS DE IA (backend) ===
+                  _buildAiWidgets(question, formProvider),
                 ],
               ),
             ),
@@ -638,6 +818,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
         return;
       }
 
+      // Verificação final de inconsistências e padronização (IA)
+      await _runFinalAiChecks(formProvider);
+
       // Finalizar formulário
       if (widget.questionnaire.requiresPhoto) {
         // Para questionários com foto, navegar para captura de foto
@@ -657,6 +840,86 @@ class _QuestionScreenState extends State<QuestionScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  /// Executa verificações finais de IA antes de submeter
+  Future<void> _runFinalAiChecks(FormProvider formProvider) async {
+    final aiProvider = Provider.of<AiProvider>(context, listen: false);
+    if (!aiProvider.isAiAvailable) return;
+
+    try {
+      final responsesMap = <String, dynamic>{};
+      formProvider.responses.forEach((key, val) {
+        responsesMap[key.toString()] = val;
+      });
+
+      // Solicitar padronização
+      final stdResult = await aiProvider.standardizeResponses(
+        responses: responsesMap,
+      );
+
+      // Se há sugestões de padronização, mostrar diálogo resumido
+      if (stdResult.hasSuggestions && mounted) {
+        final accepted = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Sugestões de padronização'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${stdResult.suggestions.length} campo(s) podem ser padronizados.',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: stdResult.suggestions.length,
+                      itemBuilder: (_, i) {
+                        final s = stdResult.suggestions[i];
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            '${s.originalValue} → ${s.suggestedValue}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          subtitle: Text(s.standardizationType,
+                              style: const TextStyle(fontSize: 11)),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Manter originais'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Aceitar todas'),
+              ),
+            ],
+          ),
+        );
+
+        if (accepted == true) {
+          for (final s in stdResult.suggestions) {
+            formProvider.setResponse(s.questionId, s.suggestedValue, 'text');
+            aiProvider.acceptStandardization(s.questionId);
+          }
+        }
+      }
+    } catch (e) {
+      // IA não deve bloquear a submissão
+      print('⚠️ Erro nas verificações finais de IA: $e');
     }
   }
 
@@ -834,9 +1097,333 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
   }
 
+  /// Constrói os widgets de IA para a pergunta atual
+  Widget _buildAiWidgets(Question question, FormProvider formProvider) {
+    return Consumer<AiProvider>(
+      builder: (context, aiProvider, _) {
+        if (!aiProvider.isAiAvailable) return const SizedBox.shrink();
+
+        // No modo demo, injetar dados para a pergunta atual
+        if (aiProvider.isDemoMode) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            aiProvider.loadDemoDataForQuestion(question.id);
+          });
+        }
+
+        final questionType = question.questionType.toLowerCase();
+        final isTextType = questionType == 'text' || questionType == 'textarea';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Transcrição de voz (apenas para campos de texto)
+            if (isTextType) ...[
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
+                  final authProvider =
+                      Provider.of<AuthProvider>(context, listen: false);
+                  return VoiceTranscriptionWidget(
+                questionId: question.id,
+                questionnaireId: widget.questionnaire.id,
+                questionText: question.questionText,
+                applicatorName: authProvider.user?.fullName,
+                applicatorId: authProvider.user?.id,
+                currentValue: formProvider.getResponse(question.id)?.toString(),
+                onTranscriptionAccepted: (text) {
+                  formProvider.setResponse(
+                    question.id,
+                    text,
+                    question.questionType,
+                  );
+                  setState(() {
+                    _currentAnswers[question.id] = text;
+                  });
+                },
+              );
+                },
+              ),
+            ],
+
+            // 2. Alertas de inconsistência
+            Builder(
+              builder: (context) {
+                final alerts = aiProvider.getAlertsForQuestion(question.id);
+                if (alerts.isEmpty) return const SizedBox.shrink();
+
+                return InconsistencyAlertWidget(
+                  alerts: alerts,
+                  onCorrect: () {
+                    aiProvider.resolveInconsistency(
+                      question.id,
+                      InconsistencyAction.corrected,
+                    );
+                  },
+                  onKeep: () {
+                    aiProvider.resolveInconsistency(
+                      question.id,
+                      InconsistencyAction.kept,
+                    );
+                  },
+                  onReviewLater: () {
+                    aiProvider.resolveInconsistency(
+                      question.id,
+                      InconsistencyAction.reviewLater,
+                    );
+                  },
+                );
+              },
+            ),
+
+            // 3. Sugestão de padronização
+            Builder(
+              builder: (context) {
+                final std =
+                    aiProvider.getStandardizationForQuestion(question.id);
+                if (std == null) return const SizedBox.shrink();
+
+                return StandardizationSuggestionWidget(
+                  suggestion: std,
+                  onAccept: () {
+                    aiProvider.acceptStandardization(question.id);
+                    // Aplicar valor padronizado
+                    formProvider.setResponse(
+                      question.id,
+                      std.suggestedValue,
+                      question.questionType,
+                    );
+                    setState(() {
+                      _currentAnswers[question.id] = std.suggestedValue;
+                    });
+                  },
+                  onReject: () {
+                    aiProvider.rejectStandardization(question.id);
+                  },
+                );
+              },
+            ),
+
+            // 4. Sugestão inteligente de preenchimento
+            Builder(
+              builder: (context) {
+                final suggestion =
+                    aiProvider.smartFieldsResult.getSuggestionForQuestion(question.id);
+                if (suggestion == null || suggestion.applied) {
+                  return const SizedBox.shrink();
+                }
+
+                return SmartSuggestionWidget(
+                  suggestion: suggestion,
+                  onApply: () {
+                    aiProvider.applySmartSuggestion(question.id);
+                    formProvider.setResponse(
+                      question.id,
+                      suggestion.suggestedValue,
+                      question.questionType,
+                    );
+                    setState(() {
+                      _currentAnswers[question.id] = suggestion.suggestedValue;
+                    });
+                  },
+                  onIgnore: () {
+                    aiProvider.ignoreSmartSuggestion(question.id);
+                  },
+                );
+              },
+            ),
+
+            // 5. Sugestões de follow-up
+            Builder(
+              builder: (context) {
+                if (!aiProvider.followUpResult.hasSuggestions) {
+                  return const SizedBox.shrink();
+                }
+
+                return FollowUpSuggestionWidget(
+                  suggestions: aiProvider.followUpResult.suggestions,
+                  onApply: (index) {
+                    aiProvider.applyFollowUp(index);
+                  },
+                  onIgnore: (index) {
+                    aiProvider.ignoreFollowUp(index);
+                  },
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFollowUpTipsModal(
+    BuildContext context,
+    String questionText,
+    List<String> tips,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (_, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header
+                  Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline,
+                          color: Colors.purple.shade400, size: 22),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Sugestões de Follow-up',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF23345F),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Pergunta de referência
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      questionText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Lista de dicas
+                  Expanded(
+                    child: tips.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.info_outline,
+                                    size: 48,
+                                    color: Colors.grey.shade300),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Nenhuma dica configurada para esta pergunta.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'O administrador pode adicionar dicas no painel.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                      controller: scrollController,
+                      itemCount: tips.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) {
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border:
+                                Border.all(color: Colors.purple.shade100),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${i + 1}.',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  tips[i],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    color: Color(0xFF23345F),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
+    // Limpar contexto de IA ao sair da tela
+    try {
+      Provider.of<AiProvider>(context, listen: false).clearFormContext();
+    } catch (_) {}
     super.dispose();
   }
 }

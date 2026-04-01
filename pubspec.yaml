@@ -88,6 +88,9 @@ dependencies:
 
   flutter_map_cancellable_tile_provider: ^2.0.0
 
+  # Gravação de áudio (transcrição de voz)
+  record: 5.0.5
+
   # ESSENCIAIS para fotos offline:
   path_provider: ^2.1.1          # Para obter diretórios do sistema
 
@@ -115,6 +118,12 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "assets/icon/icone_app.png"
+
+dependency_overrides:
+  # record_linux 0.7.2 é incompatível com record_platform_interface 1.5.0
+  # Usar stub local que implementa os métodos faltantes
+  record_linux:
+    path: packages/record_linux_stub
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1

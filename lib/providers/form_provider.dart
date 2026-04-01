@@ -11,6 +11,7 @@ import '../services/conditional_logic_engine.dart';
 import '../services/local_storage_service.dart';
 import '../services/api_service.dart';
 import '../services/photo_storage_service.dart';
+import '../services/transcription_storage_service.dart';
 
 class FormProvider with ChangeNotifier {
   FormResponse? _currentForm;
@@ -1312,6 +1313,17 @@ class FormProvider with ChangeNotifier {
         } catch (debugError) {
           print('❌ Erro no debug de fotos: $debugError');
         }
+      }
+
+      // 3. Sincronizar transcrições de áudio pendentes
+      print('🎙️ === FASE 3: SINCRONIZANDO TRANSCRIÇÕES ===');
+      try {
+        final transcriptionsSynced =
+            await TranscriptionStorageService.syncPending();
+        print('🎙️ Transcrições sincronizadas: $transcriptionsSynced');
+        totalSynced += transcriptionsSynced;
+      } catch (e) {
+        print('⚠️ Erro ao sincronizar transcrições: $e');
       }
 
       print('📊 === SINCRONIZAÇÃO COMPLETA CONCLUÍDA ===');

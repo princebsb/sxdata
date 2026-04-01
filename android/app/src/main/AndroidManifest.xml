@@ -19,6 +19,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"
         tools:node="remove" />
     
+    <!-- Microfone (transcrição de voz) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Câmera e Armazenamento -->
     <uses-permission android:name="android.permission.CAMERA" />
 

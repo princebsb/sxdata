@@ -325,8 +325,9 @@ Widget _buildTextInput() {
       child: TextFormField(
         initialValue: widget.initialValue?.toString(),
         onChanged: (value) {
-          final numValue = double.tryParse(value);
-          widget.onChanged(numValue);
+          // Passa o texto bruto para que o validator possa analisar caracteres inválidos
+          // O FormProvider e o validator tratam a conversão
+          widget.onChanged(value);
         },
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
