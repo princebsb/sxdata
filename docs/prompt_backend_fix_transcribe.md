@@ -1,5 +1,44 @@
 # PROMPT PARA O AGENTE DO PAINEL — Corrigir/Criar endpoint POST /api/ai/transcribe
 
+> ## ⚠️ ATUALIZAÇÃO 09/06/2026 — O PROBLEMA MUDOU APÓS A TROCA DE SERVIDOR
+>
+> O endpoint `transcribe` **já existe e responde** (não é mais o caso de criá-lo).
+> Depois que o servidor foi migrado, ele passou a retornar este erro ao app:
+>
+> ```
+> Erro interno: unlink(/home/sxdata/painel.sxdata.com.br/uploads/audio/audio_1781004579_2816.wav): No such file or directory
+> ```
+>
+> ### Diagnóstico confirmado (com evidência de FTP)
+>
+> 1. O áudio **sai do app e chega ao servidor** por HTTP (`POST /api/ai/transcribe`, campo `audio`, arquivo ~60–100 KB).
+> 2. **Nenhum arquivo novo está sendo gravado** na pasta de upload — no FTP, `/uploads/audio/` só tem `.wav` antigos (de 14/05/2026), nenhum da data atual.
+> 3. A mensagem aponta o caminho **`/home/sxdata/painel.sxdata.com.br/uploads/audio/`**, que provavelmente **não é mais a pasta física real** depois da migração — ou o usuário do PHP não tem permissão de escrita nela.
+> 4. Como o `do_upload()` falha (caminho inexistente / sem permissão), o arquivo nunca é salvo, e em seguida o `unlink()` num nome remontado (`audio_<time>_<rand>.wav`) estoura com *"No such file or directory"*. Esse `unlink` é só o **sintoma final** — a falha real é o upload não gravar.
+>
+> Observação reforçando o item 4: o nome que o `unlink` tenta apagar (`audio_..._....wav`) é **diferente** do nome com que o app envia o arquivo (`recording_<millis>.wav`). Antes da migração já havia divergência entre o nome gravado e o nome apagado.
+>
+> ### O que corrigir (em ordem de prioridade)
+>
+> 1. **Conferir o `upload_path` real no servidor novo.** Descobrir o caminho absoluto correto da pasta `uploads/audio/` (use `FCPATH . 'uploads/audio/'` em vez de hardcode `/home/sxdata/...`) e garantir que o código aponte para ele.
+> 2. **Permissão/dono da pasta.** `0775` não basta se o dono/grupo não for o usuário do PHP (`www-data` ou usuário do cPanel). Ajustar `chown` para o usuário que roda o PHP.
+> 3. **Checar se o `do_upload()` deu certo ANTES de transcrever** — se `false`, retornar JSON de erro e **não** prosseguir para o `unlink`.
+> 4. **Usar o caminho que o upload realmente gravou:** `$path = $this->upload->data('full_path');` — nunca remontar o nome do arquivo manualmente.
+> 5. **Limpeza segura:** trocar `unlink($path)` por `if ($path && file_exists($path)) { @unlink($path); }` para a limpeza nunca derrubar a resposta.
+>
+> ```bash
+> # No servidor NOVO, descobrir o caminho real e ajustar dono/permissão:
+> ls -la $(php -r "echo getcwd();")/uploads/audio/
+> chmod 775 <caminho_real>/uploads/audio/
+> chown <usuario_do_php>:<grupo_do_php> <caminho_real>/uploads/audio/
+> ```
+>
+> **Nada precisa mudar no app.** A URL base (`https://painel.sxdata.com.br/api`) já aponta para o servidor novo (login e carregamento de questionário funcionam). O app não conhece caminhos de pasta nem FTP — apenas envia o áudio por HTTP. A correção é inteiramente no painel.
+>
+> O restante deste documento (abaixo) continua válido como referência da implementação completa do endpoint.
+>
+> ---
+
 Você é o desenvolvedor backend do painel administrativo SXDATA (CodeIgniter 3 + PHP).
 O app móvel está enviando arquivos de áudio `.wav` para transcrição via `POST /api/ai/transcribe`, mas o endpoint está retornando uma página de erro PHP em vez de JSON.
 

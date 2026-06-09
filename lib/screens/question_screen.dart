@@ -17,7 +17,10 @@ import '../widgets/approved_suggestion_banner.dart';
 import '../services/local_validation_service.dart';
 import 'photo_capture_screen.dart';
 import 'form_completed_screen.dart';
+import 'location_disclosure_screen.dart';
 import '../providers/auth_provider.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class QuestionScreen extends StatefulWidget {
   final Questionnaire questionnaire;
@@ -832,6 +835,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
           ),
         );
       } else {
+        // Sem foto: capturar a localização (se exigida) antes de submeter.
+        // A captura via PhotoCaptureScreen não acontece aqui, então fazemos aqui.
+        await _captureLocationIfRequired(formProvider);
         // Para questionários sem foto, submeter e navegar
         await _submitAndNavigate(formProvider);
       }
@@ -920,6 +926,51 @@ class _QuestionScreenState extends State<QuestionScreen> {
     } catch (e) {
       // IA não deve bloquear a submissão
       print('⚠️ Erro nas verificações finais de IA: $e');
+    }
+  }
+
+  /// Captura a localização GPS quando o questionário exige (requiresLocation),
+  /// mas o fluxo não passa pela PhotoCaptureScreen (que já captura por conta própria).
+  /// Sem isso, questionários com "Capturar Localização" ligado e "Requer Foto"
+  /// desligado nunca registravam as coordenadas.
+  Future<void> _captureLocationIfRequired(FormProvider formProvider) async {
+    if (!widget.questionnaire.requiresLocation) return;
+
+    // Já capturada (ex.: edição com localização preservada)? Não recapturar.
+    if (formProvider.currentForm?.latitude != null) {
+      print('📍 Localização já definida, mantendo a existente');
+      return;
+    }
+
+    try {
+      var status = await Permission.location.status;
+
+      // Sem permissão ainda: mostrar disclosure (exigido pelo Google Play) e solicitar.
+      if (!status.isGranted) {
+        if (!mounted) return;
+        final granted = await LocationDisclosureHelper
+            .showDisclosureAndRequestPermission(context);
+        if (!granted) {
+          print('📍 Permissão de localização não concedida — seguindo sem coordenadas');
+          return;
+        }
+      }
+
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('📍 Serviço de localização desativado — seguindo sem coordenadas');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 15));
+
+      print('📍 Localização obtida: ${position.latitude}, ${position.longitude}');
+      formProvider.setLocation(position.latitude, position.longitude, '');
+    } catch (e) {
+      // Falha na captura não deve bloquear a submissão do formulário.
+      print('❌ Erro ao capturar localização: $e');
     }
   }
 
