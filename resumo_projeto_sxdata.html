@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SXData - Resumo do Projeto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: #fff;
+        }
+        h1 {
+            text-align: center;
+            color: #23345F;
+            font-size: 24px;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #8fae5d;
+            padding-bottom: 15px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            background: linear-gradient(135deg, #23345F, #3a4d7a);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .section-content {
+            padding-left: 15px;
+            color: #444;
+        }
+        .section-content p {
+            margin-bottom: 10px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 6px;
+            position: relative;
+        }
+        li::marker {
+            color: #8fae5d;
+        }
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            list-style: none;
+            padding: 0;
+        }
+        .tech-list li {
+            background: #f0f4e8;
+            border: 1px solid #8fae5d;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #23345F;
+        }
+        .platforms {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        .platform {
+            text-align: center;
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        .platform-icon {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        .platform-name {
+            font-weight: 600;
+            color: #23345F;
+        }
+        .platform-status {
+            font-size: 11px;
+            color: #8fae5d;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #888;
+            font-size: 12px;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        @media print {
+            body {
+                padding: 20px;
+            }
+            .section-title {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>SXData</h1>
+    <p class="subtitle">Aplicativo de Coleta de Dados em Campo</p>
+
+    <div class="section">
+        <div class="section-title">Descricao do Projeto</div>
+        <div class="section-content">
+            <p>Aplicativo mobile/web completo desenvolvido em <strong>Flutter</strong> para coleta de dados atraves de questionarios dinamicos, com funcionamento <span class="highlight">offline-first</span> e painel de gestao integrado.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Tecnologias Utilizadas</div>
+        <div class="section-content">
+            <ul class="tech-list">
+                <li>Flutter/Dart (SDK 3.8+)</li>
+                <li>Provider</li>
+                <li>SQLite</li>
+                <li>REST API</li>
+                <li>FL Chart</li>
+                <li>Flutter Map</li>
+                <li>Geolocator</li>
+                <li>SharedPreferences</li>
+                <li>Secure Storage</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Modulo de Coleta</div>
+        <div class="section-content">
+            <ul>
+                <li>Sistema de questionarios dinamicos com logica condicional</li>
+                <li>Funcionamento offline com sincronizacao automatica</li>
+                <li>Captura de fotos com armazenamento local</li>
+                <li>Geolocalizacao GPS</li>
+                <li>Termo de consentimento digital</li>
+                <li>Edicao de formularios pendentes antes do envio</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Painel de Gestao (Supervisores/Administradores)</div>
+        <div class="section-content">
+            <ul>
+                <li>Dashboard com estatisticas em tempo real</li>
+                <li>Graficos interativos (barras, linhas, pizza)</li>
+                <li>Mapa de aplicadores com areas de atuacao</li>
+                <li>Analise detalhada por questao</li>
+                <li>Exportacao de relatorios (Excel/PDF)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Recursos Tecnicos</div>
+        <div class="section-content">
+            <ul>
+                <li>Autenticacao JWT com multiplos niveis de acesso (aplicador, supervisor, admin)</li>
+                <li>Armazenamento seguro de credenciais</li>
+                <li>Sincronizacao inteligente de dados e fotos</li>
+                <li>Internacionalizacao (PT-BR)</li>
+                <li>Suporte multiplataforma: Android, iOS e Web</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Plataformas</div>
+        <div class="section-content">
+            <div class="platforms">
+                <div class="platform">
+                    <div class="platform-icon">🤖</div>
+                    <div class="platform-name">Android</div>
+                    <div class="platform-status">Play Store Ready v1.0.0</div>
+                </div>
+                <div class="platform">
+                    <div class="platform-icon">🍎</div>
+                    <div class="platform-name">iOS</div>
+                    <div class="platform-status">App Store Ready</div>
+                </div>
+                <div class="platform">
+                    <div class="platform-icon">🌐</div>
+                    <div class="platform-name">Web</div>
+                    <div class="platform-status">PWA Disponivel</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Projeto desenvolvido com Flutter - 2024/2025</p>
+        <p>Versao 1.0.0+10</p>
+    </div>
+</body>
+</html>
